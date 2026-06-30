@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  devices   Device[]
+  alerts    Alert[]
+}
+
+enum Role {
+  USER
+  ADMIN
+  ENGINEER
+}
+
+model Device {
+  id            String   @id @default(uuid())
+  name          String
+  type          DeviceType
+  location      String
+  capacity      Float    // kW
+  status        DeviceStatus @default(ONLINE)
+  specifications Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  energyData    EnergyData[]
+  alerts        Alert[]
+}
+
+enum DeviceType {
+  SOLAR
+  WIND
+  HYDRO
+  GRID
+  BATTERY
+  LOAD
+  EV_CHARGER
+  GEOTHERMAL
+  BIOMASS
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  MAINTENANCE
+  ERROR
+}
+
+model EnergyData {
+  id            String   @id @default(uuid())
+  deviceId      String
+  device        Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  timestamp     DateTime @default(now())
+  voltage       Float
+  current       Float
+  power         Float    // Watts
+  energy        Float    // Watt-hours
+  frequency     Float
+  powerFactor   Float
+  temperature   Float
+  status        EnergyStatus @default(NORMAL)
+  
+  // Renewable-specific metrics
+  windSpeed     Float?
+  waterFlow     Float?
+  waterHead     Float?
+  irradiance    Float?
+  
+  createdAt     DateTime @default(now())
+}
+
+enum EnergyStatus {
+  NORMAL
+  WARNING
+  CRITICAL
+}
+
+model Alert {
+  id            String   @id @default(uuid())
+  deviceId      String
+  device        Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          AlertType
+  message       String
+  severity      AlertSeverity
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  resolvedAt    DateTime?
+}
+
+enum AlertType {
+  OVERVOLTAGE
+  UNDERVOLTAGE
+  OVERCURRENT
+  OVERTEMPERATURE
+  LOW_POWER
+  DEVICE_OFFLINE
+  MAINTENANCE_REQUIRED
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String
+  action      String
+  details     Json
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+}
